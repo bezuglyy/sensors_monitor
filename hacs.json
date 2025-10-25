@@ -1,0 +1,8 @@
+{
+  "name": "Sensors Monitor",
+  "content_in_root": false,
+  "domain": "sensors_monitor",
+  "country": "RU",
+  "homeassistant": "2025.1.0",
+  "render_readme": true
+}
