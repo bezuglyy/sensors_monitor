@@ -1,8 +1,6 @@
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.helpers.selector import (
-    EntitySelector, EntitySelectorConfig, TextSelector, NumberSelector
-)
+from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig, TextSelector, NumberSelector
 from .const import *
 
 def _normalize_ml(value):
@@ -27,6 +25,9 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema({
             vol.Optional(CONF_BINARY_SENSORS): EntitySelector(
                 EntitySelectorConfig(domain=["binary_sensor"], multiple=True)
+            ),
+            vol.Optional(CONF_SENSORS_PLAIN): EntitySelector(
+                EntitySelectorConfig(domain=["sensor"], multiple=True)
             ),
             vol.Optional(CONF_THRESHOLDS, default=""): TextSelector({"multiline": True}),
             vol.Required(CONF_NOTIFY_ON, default="notify.dom"): TextSelector({"multiline": False}),
@@ -69,6 +70,9 @@ class OptionsFlow(config_entries.OptionsFlow):
         schema = vol.Schema({
             vol.Optional(CONF_BINARY_SENSORS, default=_get(CONF_BINARY_SENSORS, [])): EntitySelector(
                 EntitySelectorConfig(domain=["binary_sensor"], multiple=True)
+            ),
+            vol.Optional(CONF_SENSORS_PLAIN, default=_get(CONF_SENSORS_PLAIN, [])): EntitySelector(
+                EntitySelectorConfig(domain=["sensor"], multiple=True)
             ),
             vol.Optional(CONF_THRESHOLDS, default=_get(CONF_THRESHOLDS, "")): TextSelector({"multiline": True}),
             vol.Required(CONF_NOTIFY_ON, default=_get(CONF_NOTIFY_ON, "notify.dom")): TextSelector({"multiline": False}),

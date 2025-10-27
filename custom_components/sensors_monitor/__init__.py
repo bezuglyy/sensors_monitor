@@ -64,6 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     cfg = {**entry.data, **entry.options}
 
     binary_sensors = _as_list(cfg.get(CONF_BINARY_SENSORS, []))
+    sensors_plain = _as_list(cfg.get(CONF_SENSORS_PLAIN, []))
     thresholds = _parse_thresholds(cfg.get(CONF_THRESHOLDS, ""))
 
     notify_on = cfg.get(CONF_NOTIFY_ON, "notify.dom")
@@ -75,6 +76,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     norm = {
         CONF_BINARY_SENSORS: binary_sensors,
+        CONF_SENSORS_PLAIN: sensors_plain,
         CONF_THRESHOLDS: thresholds,
         CONF_NOTIFY_ON: notify_on,
         CONF_NOTIFY_OFF: notify_off,

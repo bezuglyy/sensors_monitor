@@ -1,7 +1,7 @@
 {
   "domain": "sensors_monitor",
   "name": "Мониторинг датчиков",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "documentation": "https://github.com/bezuglyy/sensors_monitor",
   "requirements": [],
   "codeowners": ["@bezuglyy"],

@@ -1,6 +1,7 @@
 DOMAIN = "sensors_monitor"
 
 CONF_BINARY_SENSORS = "binary_sensors"
+CONF_SENSORS_PLAIN = "sensors_plain"
 CONF_THRESHOLDS = "sensors_thresholds"
 
 CONF_NOTIFY_ON = "notify_on"

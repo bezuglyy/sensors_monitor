@@ -12,6 +12,7 @@ def _to_float(val):
 
 async def async_setup_monitor(hass: HomeAssistant, entry_id: str, cfg: dict):
     binary_sensors = cfg[CONF_BINARY_SENSORS]
+    sensors_plain = cfg[CONF_SENSORS_PLAIN]
     thresholds = cfg[CONF_THRESHOLDS]
     notify_on = cfg[CONF_NOTIFY_ON]
     notify_off = cfg[CONF_NOTIFY_OFF]
@@ -56,26 +57,47 @@ async def async_setup_monitor(hass: HomeAssistant, entry_id: str, cfg: dict):
         return msg.replace("{value}", f"{val}")
 
     async def _report(_now):
-        lines = []
+        lines_bin = []
+        lines_thr = []
+        lines_plain = []
+
         # binary sensors active
         for ent in binary_sensors:
             st = hass.states.get(ent)
             if st and st.state == "on":
                 delta = (now().timestamp() - st.last_changed.timestamp())
                 h = int(delta // 3600); m = int((delta % 3600) // 60); s = int(delta % 60)
-                lines.append(f"• {st.name} (активно {h}ч {m}м {s}с)")
+                lines_bin.append(f"• {st.name} (активно {h}ч {m}м {s}с)")
+
         # thresholds
         for r in thresholds:
             ent = r["entity_id"]
             st = hass.states.get(ent)
             if _check_threshold(st, r):
                 val = _to_float(st.state)
-                lines.append(f"• {ent}: {_format_msg(r, val)}")
-        if lines:
-            msg = "\n".join(lines)
-            await _broadcast(notify_alerts, "📈 Статус датчиков", msg)
+                lines_thr.append(f"• {ent}: {_format_msg(r, val)}")
+
+        # plain sensors
+        for ent in sensors_plain:
+            st = hass.states.get(ent)
+            if st:
+                unit = st.attributes.get('unit_of_measurement', '')
+                unit = f" {unit}" if unit else ""
+                lines_plain.append(f"• {st.name}: {st.state}{unit}")
+
+        msg = []
+        if lines_bin:
+            msg.append("📡 Binary Sensors:\n" + "\n".join(lines_bin))
+        if lines_thr:
+            msg.append("🌡 Threshold Sensors:\n" + "\n".join(lines_thr))
+        if lines_plain:
+            msg.append("📊 Plain Sensors:\n" + "\n".join(lines_plain))
+
+        if msg:
+            text = "\n\n".join(msg)
+            await _broadcast(notify_alerts, "📈 Отчёт датчиков", text)
             if notify_tts:
-                await _speak(notify_tts, f"Активных событий: {len(lines)}")
+                await _speak(notify_tts, f"Отчёт по датчикам: {len(lines_bin)} бинарных, {len(lines_thr)} пороговых, {len(lines_plain)} обычных")
 
     # interval & schedule
     async_track_time_interval(hass, _report, timedelta(minutes=interval))
@@ -120,7 +142,7 @@ async def async_setup_monitor(hass: HomeAssistant, entry_id: str, cfg: dict):
                         await _speak(notify_tts, msg)
             last_alert_state[ent] = True
         elif (not in_alert) and was_alert:
-            await _broadcast(notify_alerts, f"✅ В норме: {ent}", "Показания в допустимых пределах")
+            await _broadcast(notify_alerts, f"✅ В норме: {ent}", "Показания в норме")
             if notify_tts:
                 await _speak(notify_tts, f"{ent} в норме")
             last_alert_state[ent] = False
