@@ -30,14 +30,19 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 EntitySelectorConfig(domain=["sensor"], multiple=True)
             ),
             vol.Optional(CONF_THRESHOLDS, default=""): TextSelector({"multiline": True}),
+
             vol.Required(CONF_NOTIFY_ON, default="notify.dom"): TextSelector({"multiline": False}),
             vol.Required(CONF_NOTIFY_OFF, default="notify.dom"): TextSelector({"multiline": False}),
             vol.Required(CONF_NOTIFY_ALERTS, default="notify.dom"): TextSelector({"multiline": True}),
             vol.Optional(CONF_NOTIFY_TTS, default=""): TextSelector({"multiline": True}),
-            vol.Required(CONF_INTERVAL, default=10): NumberSelector({
-                "min": 1, "max": 120, "unit_of_measurement": "мин", "mode": "slider"
-            }),
-            vol.Optional(CONF_REPORT_SCHEDULE, default="09:00\n21:00"): TextSelector({"multiline": True}),
+
+            vol.Required(CONF_BINARY_INTERVAL, default=10): NumberSelector({"min": 1, "max": 120, "mode": "slider"}),
+            vol.Required(CONF_THRESHOLD_INTERVAL, default=10): NumberSelector({"min": 1, "max": 120, "mode": "slider"}),
+            vol.Required(CONF_PLAIN_INTERVAL, default=10): NumberSelector({"min": 1, "max": 120, "mode": "slider"}),
+
+            vol.Optional(CONF_BINARY_SCHEDULE, default="08:00\n20:00"): TextSelector({"multiline": True}),
+            vol.Optional(CONF_THRESHOLD_SCHEDULE, default="09:00\n21:00"): TextSelector({"multiline": True}),
+            vol.Optional(CONF_PLAIN_SCHEDULE, default="10:00\n22:00"): TextSelector({"multiline": True}),
         })
         return self.async_show_form(step_id="user", data_schema=schema)
 
@@ -61,11 +66,8 @@ class OptionsFlow(config_entries.OptionsFlow):
 
         alerts_val = _get(CONF_NOTIFY_ALERTS, "notify.dom")
         alerts_text = "\n".join(alerts_val) if isinstance(alerts_val, list) else str(alerts_val)
-
         tts_val = _get(CONF_NOTIFY_TTS, [])
         tts_text = "\n".join(tts_val) if isinstance(tts_val, list) else str(tts_val)
-
-        schedule_val = _get(CONF_REPORT_SCHEDULE, "09:00\n21:00")
 
         schema = vol.Schema({
             vol.Optional(CONF_BINARY_SENSORS, default=_get(CONF_BINARY_SENSORS, [])): EntitySelector(
@@ -75,13 +77,18 @@ class OptionsFlow(config_entries.OptionsFlow):
                 EntitySelectorConfig(domain=["sensor"], multiple=True)
             ),
             vol.Optional(CONF_THRESHOLDS, default=_get(CONF_THRESHOLDS, "")): TextSelector({"multiline": True}),
+
             vol.Required(CONF_NOTIFY_ON, default=_get(CONF_NOTIFY_ON, "notify.dom")): TextSelector({"multiline": False}),
             vol.Required(CONF_NOTIFY_OFF, default=_get(CONF_NOTIFY_OFF, "notify.dom")): TextSelector({"multiline": False}),
             vol.Required(CONF_NOTIFY_ALERTS, default=alerts_text): TextSelector({"multiline": True}),
             vol.Optional(CONF_NOTIFY_TTS, default=tts_text): TextSelector({"multiline": True}),
-            vol.Required(CONF_INTERVAL, default=_get(CONF_INTERVAL, 10)): NumberSelector({
-                "min": 1, "max": 120, "unit_of_measurement": "мин", "mode": "slider"
-            }),
-            vol.Optional(CONF_REPORT_SCHEDULE, default=schedule_val): TextSelector({"multiline": True}),
+
+            vol.Required(CONF_BINARY_INTERVAL, default=_get(CONF_BINARY_INTERVAL, 10)): NumberSelector({"min": 1, "max": 120, "mode": "slider"}),
+            vol.Required(CONF_THRESHOLD_INTERVAL, default=_get(CONF_THRESHOLD_INTERVAL, 10)): NumberSelector({"min": 1, "max": 120, "mode": "slider"}),
+            vol.Required(CONF_PLAIN_INTERVAL, default=_get(CONF_PLAIN_INTERVAL, 10)): NumberSelector({"min": 1, "max": 120, "mode": "slider"}),
+
+            vol.Optional(CONF_BINARY_SCHEDULE, default=_get(CONF_BINARY_SCHEDULE, "08:00\n20:00")): TextSelector({"multiline": True}),
+            vol.Optional(CONF_THRESHOLD_SCHEDULE, default=_get(CONF_THRESHOLD_SCHEDULE, "09:00\n21:00")): TextSelector({"multiline": True}),
+            vol.Optional(CONF_PLAIN_SCHEDULE, default=_get(CONF_PLAIN_SCHEDULE, "10:00\n22:00")): TextSelector({"multiline": True}),
         })
         return self.async_show_form(step_id="init", data_schema=schema)

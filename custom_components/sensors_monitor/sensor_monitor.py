@@ -11,15 +11,22 @@ def _to_float(val):
         return None
 
 async def async_setup_monitor(hass: HomeAssistant, entry_id: str, cfg: dict):
-    binary_sensors = cfg[CONF_BINARY_SENSORS]
-    sensors_plain = cfg[CONF_SENSORS_PLAIN]
-    thresholds = cfg[CONF_THRESHOLDS]
+    binary_sensors = cfg.get(CONF_BINARY_SENSORS, [])
+    sensors_plain = cfg.get(CONF_SENSORS_PLAIN, [])
+    thresholds = cfg.get(CONF_THRESHOLDS, [])
+
     notify_on = cfg[CONF_NOTIFY_ON]
     notify_off = cfg[CONF_NOTIFY_OFF]
     notify_alerts = cfg[CONF_NOTIFY_ALERTS]
     notify_tts = cfg[CONF_NOTIFY_TTS]
-    interval = cfg[CONF_INTERVAL]
-    schedule = cfg[CONF_REPORT_SCHEDULE]
+
+    bin_int = cfg[CONF_BINARY_INTERVAL]
+    thr_int = cfg[CONF_THRESHOLD_INTERVAL]
+    plain_int = cfg[CONF_PLAIN_INTERVAL]
+
+    bin_sched = cfg[CONF_BINARY_SCHEDULE]
+    thr_sched = cfg[CONF_THRESHOLD_SCHEDULE]
+    plain_sched = cfg[CONF_PLAIN_SCHEDULE]
 
     threshold_entities = [r["entity_id"] for r in thresholds if "entity_id" in r]
     last_alert_state = {}
@@ -56,54 +63,71 @@ async def async_setup_monitor(hass: HomeAssistant, entry_id: str, cfg: dict):
         msg = rule.get("message") or f"{rule['entity_id']} = {val}"
         return msg.replace("{value}", f"{val}")
 
-    async def _report(_now):
-        lines_bin = []
-        lines_thr = []
-        lines_plain = []
-
-        # binary sensors active
+    # --- Report generators per type ---
+    async def _report_binary(_now):
+        lines = []
         for ent in binary_sensors:
             st = hass.states.get(ent)
             if st and st.state == "on":
                 delta = (now().timestamp() - st.last_changed.timestamp())
                 h = int(delta // 3600); m = int((delta % 3600) // 60); s = int(delta % 60)
-                lines_bin.append(f"• {st.name} (активно {h}ч {m}м {s}с)")
+                lines.append(f"• {st.name} (активно {h}ч {m}м {s}с)")
+        if lines:
+            text = "📡 Binary Sensors:\n" + "\n".join(lines)
+            await _broadcast(notify_alerts, "📈 Отчёт (Binary)", text)
+            if notify_tts:
+                await _speak(notify_tts, f"Бинарных активных: {len(lines)}")
 
-        # thresholds
+    async def _report_threshold(_now):
+        lines = []
         for r in thresholds:
             ent = r["entity_id"]
             st = hass.states.get(ent)
             if _check_threshold(st, r):
                 val = _to_float(st.state)
-                lines_thr.append(f"• {ent}: {_format_msg(r, val)}")
+                lines.append(f"• {ent}: {_format_msg(r, val)}")
+        if lines:
+            text = "🌡 Threshold Sensors:\n" + "\n".join(lines)
+            await _broadcast(notify_alerts, "📈 Отчёт (Threshold)", text)
+            if notify_tts:
+                await _speak(notify_tts, f"Пороговых нарушений: {len(lines)}")
 
-        # plain sensors
+    async def _report_plain(_now):
+        lines = []
         for ent in sensors_plain:
             st = hass.states.get(ent)
             if st:
                 unit = st.attributes.get('unit_of_measurement', '')
                 unit = f" {unit}" if unit else ""
-                lines_plain.append(f"• {st.name}: {st.state}{unit}")
-
-        msg = []
-        if lines_bin:
-            msg.append("📡 Binary Sensors:\n" + "\n".join(lines_bin))
-        if lines_thr:
-            msg.append("🌡 Threshold Sensors:\n" + "\n".join(lines_thr))
-        if lines_plain:
-            msg.append("📊 Plain Sensors:\n" + "\n".join(lines_plain))
-
-        if msg:
-            text = "\n\n".join(msg)
-            await _broadcast(notify_alerts, "📈 Отчёт датчиков", text)
+                lines.append(f"• {st.name}: {st.state}{unit}")
+        if lines:
+            text = "📊 Plain Sensors:\n" + "\n".join(lines)
+            await _broadcast(notify_alerts, "📈 Отчёт (Plain)", text)
             if notify_tts:
-                await _speak(notify_tts, f"Отчёт по датчикам: {len(lines_bin)} бинарных, {len(lines_thr)} пороговых, {len(lines_plain)} обычных")
+                await _speak(notify_tts, f"Обычных сенсоров: {len(lines)}")
 
-    # interval & schedule
-    async_track_time_interval(hass, _report, timedelta(minutes=interval))
-    for hh, mm in schedule:
-        async_track_time_change(hass, _report, hour=hh, minute=mm)
+    async def _report_all(_now):
+        await _report_binary(_now)
+        await _report_threshold(_now)
+        await _report_plain(_now)
 
+    # --- Schedulers per type ---
+    from datetime import timedelta
+    if bin_int > 0:
+        async_track_time_interval(hass, _report_binary, timedelta(minutes=bin_int))
+    if thr_int > 0:
+        async_track_time_interval(hass, _report_threshold, timedelta(minutes=thr_int))
+    if plain_int > 0:
+        async_track_time_interval(hass, _report_plain, timedelta(minutes=plain_int))
+
+    for hh, mm in bin_sched:
+        async_track_time_change(hass, _report_binary, hour=hh, minute=mm)
+    for hh, mm in thr_sched:
+        async_track_time_change(hass, _report_threshold, hour=hh, minute=mm)
+    for hh, mm in plain_sched:
+        async_track_time_change(hass, _report_plain, hour=hh, minute=mm)
+
+    # --- Realtime events ---
     @callback
     async def _bin_changed(event):
         ent = event.data.get("entity_id")
@@ -149,6 +173,7 @@ async def async_setup_monitor(hass: HomeAssistant, entry_id: str, cfg: dict):
 
     async_track_state_change_event(hass, threshold_entities, _thr_changed)
 
+    # service: send_report (all)
     async def handle_send_report(call):
-        await _report(now())
+        await _report_all(now())
     hass.services.async_register(DOMAIN, "send_report", handle_send_report)

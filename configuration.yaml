@@ -1,0 +1,33 @@
+# Example configuration for v1.2.0
+
+binary_sensors:
+  - binary_sensor.motion_hall
+  - binary_sensor.door_balcony
+
+sensors_plain:
+  - sensor.ble_temperature
+
+sensors_thresholds: |
+  sensor.temperature_bedroom; above=28; message=🔥 Жарко в спальне: {value}°C
+
+notify_on: notify.dom
+notify_off: notify.mobile_dom
+notify_alerts: |
+  notify.dom
+  notify.email_dom
+notify_tts: |
+  media_player.yandex_station_spalnya
+
+binary_interval: 5
+threshold_interval: 15
+plain_interval: 30
+
+binary_schedule: |
+  08:00
+  20:00
+threshold_schedule: |
+  09:00
+  21:00
+plain_schedule: |
+  10:00
+  22:00

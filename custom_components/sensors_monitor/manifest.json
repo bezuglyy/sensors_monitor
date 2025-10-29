@@ -1,11 +1,12 @@
 {
   "domain": "sensors_monitor",
   "name": "Мониторинг датчиков",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "documentation": "https://github.com/bezuglyy/sensors_monitor",
   "requirements": [],
   "codeowners": ["@bezuglyy"],
   "config_flow": true,
   "iot_class": "local_push",
-  "integration_type": "service"
+  "integration_type": "service",
+  "author": "Евгений Безумный"
 }

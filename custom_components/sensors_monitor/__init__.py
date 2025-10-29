@@ -71,8 +71,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     notify_off = cfg.get(CONF_NOTIFY_OFF, "notify.dom")
     notify_alerts = _as_list(cfg.get(CONF_NOTIFY_ALERTS, "notify.dom"))
     notify_tts = _as_list(cfg.get(CONF_NOTIFY_TTS, []))
-    interval = int(cfg.get(CONF_INTERVAL, 10))
-    schedule = _parse_schedule(cfg.get(CONF_REPORT_SCHEDULE, []))
+
+    # Per-type intervals (default fallback)
+    bin_int = int(cfg.get(CONF_BINARY_INTERVAL, 10))
+    thr_int = int(cfg.get(CONF_THRESHOLD_INTERVAL, 10))
+    plain_int = int(cfg.get(CONF_PLAIN_INTERVAL, 10))
+
+    # Per-type schedules
+    bin_sched = _parse_schedule(cfg.get(CONF_BINARY_SCHEDULE, []))
+    thr_sched = _parse_schedule(cfg.get(CONF_THRESHOLD_SCHEDULE, []))
+    plain_sched = _parse_schedule(cfg.get(CONF_PLAIN_SCHEDULE, []))
 
     norm = {
         CONF_BINARY_SENSORS: binary_sensors,
@@ -82,8 +90,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
         CONF_NOTIFY_OFF: notify_off,
         CONF_NOTIFY_ALERTS: notify_alerts if notify_alerts else ["notify.dom"],
         CONF_NOTIFY_TTS: notify_tts,
-        CONF_INTERVAL: interval,
-        CONF_REPORT_SCHEDULE: schedule,
+        CONF_BINARY_INTERVAL: bin_int,
+        CONF_THRESHOLD_INTERVAL: thr_int,
+        CONF_PLAIN_INTERVAL: plain_int,
+        CONF_BINARY_SCHEDULE: bin_sched,
+        CONF_THRESHOLD_SCHEDULE: thr_sched,
+        CONF_PLAIN_SCHEDULE: plain_sched,
     }
     hass.data[DOMAIN][entry.entry_id] = norm
     await async_setup_monitor(hass, entry.entry_id, norm)

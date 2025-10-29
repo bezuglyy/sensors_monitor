@@ -1,0 +1,3 @@
+sensor.temperature_bedroom; above=28; message=🔥 Жарко в спальне: {value}°C
+sensor.humidity_bathroom; above=80; message=💧 Влажность высокая: {value}%
+sensor.co2_office; above=1000; message=⚠️ CO₂ высокий: {value} ppm
